@@ -14,10 +14,10 @@ Convert-WindowsImage
         THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES.
 
     .SYNOPSIS
-        Creates a bootable VHD(X) based on Windows 7 or Windows 8 installation media.
+        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016 installation media.
 
     .DESCRIPTION
-        Creates a bootable VHD(X) based on Windows 7 or Windows 8 installation media.
+        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016 installation media.
 
     .PARAMETER SourcePath
         The complete path to the WIM or ISO file that will be converted to a Virtual Hard Disk.
@@ -67,7 +67,7 @@ Convert-WindowsImage
         The complete path to an unattend.xml file that can be injected into the VHD(X).
 
     .PARAMETER Edition
-        The name or image index of the image to apply from the WIM.
+        The name or image index of the image to apply from the WIM. Use the DISM-Powershell Module to get the names.
 
     .PARAMETER Passthru
         Specifies that the full path to the VHD(X) that is created should be
@@ -1112,11 +1112,11 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                             $txtSourcePath.Text = $isoPath = (Resolve-Path $openFileDialog1.FileName).Path
                             Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
 
-                            $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
-
+                            Mount-DiskImage -ImagePath $isoPath -StorageType ISO
+                            Get-PSDrive -PSProvider FileSystem | Out-Null #Bugfix to refresh the Drive-List
                             # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
                             $openIso     = Get-DiskImage -ImagePath $isoPath
-                            $driveLetter = ($openIso | Get-Volume).DriveLetter
+                            $driveLetter = (Get-Volume -DiskImage $openIso).DriveLetter
 
                             $script:SourcePath  = "$($driveLetter):\sources\install.wim"
 
@@ -1769,10 +1769,11 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 $isoPath = (Resolve-Path $SourcePath).Path
 
                 Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
-                $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
+                Mount-DiskImage -ImagePath $isoPath -StorageType ISO
+                Get-PSDrive -PSProvider FileSystem | Out-Null #Bugfix to refresh the Drive-List
                 # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
                 $openIso     = Get-DiskImage -ImagePath $isoPath
-                $driveLetter = ($openIso | Get-Volume).DriveLetter
+                $driveLetter = (Get-Volume -DiskImage $openIso).DriveLetter
 
                 $SourcePath  = "$($driveLetter):\sources\install.wim"
 
@@ -2079,6 +2080,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             #
             # Here we copy in the unattend file (if specified by the command line)
             #
+            Get-PSDrive -PSProvider FileSystem | Out-Null
             if (![string]::IsNullOrEmpty($UnattendPath))
             {
                 Write-W2VInfo "Applying unattend file ($(Split-Path $UnattendPath -Leaf))..."
@@ -4077,4 +4079,4 @@ VirtualHardDisk
 "@
 
     Add-Type -TypeDefinition $code -ReferencedAssemblies "System.Xml","System.Linq","System.Xml.Linq" -ErrorAction SilentlyContinue
-}  
+}
