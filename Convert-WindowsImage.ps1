@@ -4,6 +4,7 @@ Convert-WindowsImage
     <#
     .NOTES
         Copyright (c) Microsoft Corporation.  All rights reserved.
+        Copyright (c) 2019 x0nn
 
         Use of this sample source code is subject to the terms of the Microsoft
         license agreement under which you licensed this sample source code. If
@@ -14,10 +15,10 @@ Convert-WindowsImage
         THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES.
 
     .SYNOPSIS
-        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016 installation media.
+        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016, 2019 installation media.
 
     .DESCRIPTION
-        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016 installation media.
+        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016, 2019 installation media.
 
     .PARAMETER SourcePath
         The complete path to the WIM or ISO file that will be converted to a Virtual Hard Disk.
