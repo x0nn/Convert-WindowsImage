@@ -149,7 +149,7 @@ Convert-WindowsImage
         The default is False.
 
     .EXAMPLE
-        .\Convert-WindowsImage.ps1 -SourcePath D:\foo\install.wim -Edition Professional -WorkingDirectory D:\foo
+        Convert-WindowsImage -SourcePath D:\foo\install.wim -Edition Professional -WorkingDirectory D:\foo
 
         This command will create a 40GB dynamically expanding VHD in the D:\foo folder.
         The VHD will be based on the Professional edition from D:\foo\install.wim,
