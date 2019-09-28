@@ -156,7 +156,7 @@ Convert-WindowsImage
         and will be named automatically.
 
     .EXAMPLE
-        .\Convert-WindowsImage.ps1 -SourcePath D:\foo\Win7SP1.iso -Edition Ultimate -VHDPath D:\foo\Win7_Ultimate_SP1.vhd
+        Convert-WindowsImage -SourcePath D:\foo\Win7SP1.iso -Edition Ultimate -VHDPath D:\foo\Win7_Ultimate_SP1.vhd
 
         This command will parse the ISO file D:\foo\Win7SP1.iso and try to locate
         \sources\install.wim.  If that file is found, it will be used to create a
@@ -164,7 +164,7 @@ Convert-WindowsImage
         named D:\foo\Win7_Ultimate_SP1.vhd
 
     .EXAMPLE
-        .\Convert-WindowsImage.ps1 -SourcePath D:\foo\install.wim -Edition Professional -EnableDebugger Serial -ComPort 2 -BaudRate 38400
+        Convert-WindowsImage -SourcePath D:\foo\install.wim -Edition Professional -EnableDebugger Serial -ComPort 2 -BaudRate 38400
 
         This command will create a VHD from D:\foo\install.wim of the Professional SKU.
         Serial debugging will be enabled in the VHD via COM2 at a baud rate of 38400bps.
