@@ -5,14 +5,14 @@ Creates a Windows VM for Hyper-V from a Windows-ISO
 
 Create a Windows Server 2019 VM
 
-```Convert-WindowsImage -SourcePath "C:\Temp\windowsServer2019.iso" -VHDFormat "VHDX" `
-                     -Edition "VHDX" -SizeBytes "50GB" `
-                     -DiskLayout "UEFI" `
-                     -VHDPath "C:\Temp\windowsServer2019.vhdx"```
+`Convert-WindowsImage -SourcePath "C:\Temp\windowsServer2019.iso" -VHDFormat "VHDX"
+                     -Edition "Windows Server 2019 Standard" -SizeBytes 50GB
+                     -DiskLayout "UEFI"
+                     -VHDPath "C:\Temp\windowsServer2019.vhdx"`
 
 ## Requirements
 
-The script needs Powershell 5.1 on a Windows System.
+The script needs Powershell 5.1 on a Windows System with administrator rights. ISE is currently not supported
 
 ## License
 
