@@ -3,7 +3,10 @@ Creates a Windows VM for Hyper-V from a Windows-ISO
 
 ## Examples
 
-Create a Windows Server 2019 VM
+1. Dotsource the script to load the functions
+`. .\Convert-WindowsImage.ps1`
+
+2. Create a Windows Server 2019 VM
 
 `Convert-WindowsImage -SourcePath "C:\Temp\windowsServer2019.iso" -VHDFormat "VHDX"
                      -Edition "Windows Server 2019 Standard" -SizeBytes 50GB
