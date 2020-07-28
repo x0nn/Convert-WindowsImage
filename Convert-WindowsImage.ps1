@@ -4,7 +4,7 @@ Convert-WindowsImage
     <#
     .NOTES
         Copyright (c) Microsoft Corporation.  All rights reserved.
-        Copyright (c) 2019 x0nn
+        Copyright (c) x0nn
 
         Use of this sample source code is subject to the terms of the Microsoft
         license agreement under which you licensed this sample source code. If
@@ -727,8 +727,6 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             $global:mountedHive = $null
         }
 
-        ##########################################################################################
-
         function
         Test-Admin
         {
@@ -748,12 +746,10 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
             $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
             $isAdmin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-            Write-W2VTrace "isUserAdmin? $isAdmin"
+            Write-LogMessage "isUserAdmin? $isAdmin" -logType Debug
 
             return $isAdmin
         }
-
-        ##########################################################################################
 
         function
         Get-WindowsBuildNumber
@@ -762,82 +758,15 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             return [int]($os.BuildNumber)
         }
 
-        ##########################################################################################
-
         function
         Test-WindowsVersion
         {
             $isWin8 = ((Get-WindowsBuildNumber) -ge [int]$lowestSupportedBuild)
 
-            Write-W2VTrace "is Windows 8 or Higher? $isWin8"
+            Write-LogMessage "is Windows 8 or Higher? $isWin8" -logType Debug
             return $isWin8
         }
 
-        ##########################################################################################
-
-        function
-        Write-W2VInfo
-        {
-        # Function to make the Write-Host output a bit prettier.
-            [CmdletBinding()]
-            param(
-                [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-                [string]
-                [ValidateNotNullOrEmpty()]
-                $text
-            )
-            Write-Host "INFO   : $($text)"
-        }
-
-        ##########################################################################################
-
-        function
-        Write-W2VTrace
-        {
-        # Function to make the Write-Verbose output... well... exactly the same as it was before.
-            [CmdletBinding()]
-            param(
-                [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-                [string]
-                [ValidateNotNullOrEmpty()]
-                $text
-            )
-            Write-Verbose $text
-        }
-
-        ##########################################################################################
-
-        function
-        Write-W2VError
-        {
-        # Function to make the Write-Host (NOT Write-Error) output prettier in the case of an error.
-            [CmdletBinding()]
-            param(
-                [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-                [string]
-                [ValidateNotNullOrEmpty()]
-                $text
-            )
-            Write-Host "ERROR  : $($text)" -ForegroundColor (Get-Host).PrivateData.ErrorForegroundColor
-        }
-
-        ##########################################################################################
-
-        function
-        Write-W2VWarn
-        {
-        # Function to make the Write-Host (NOT Write-Warning) output prettier.
-            [CmdletBinding()]
-            param(
-                [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-                [string]
-                [ValidateNotNullOrEmpty()]
-                $text
-            )
-            Write-Host "WARN   : $($text)" -ForegroundColor (Get-Host).PrivateData.WarningForegroundColor
-        }
-
-        ##########################################################################################
 
         function
         Run-Executable
@@ -876,7 +805,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
             )
 
-            Write-W2VTrace "Running $Executable $Arguments"
+            Write-LogMessage "Running $Executable $Arguments" -logType Debug
             $ret = Start-Process           `
                 -FilePath $Executable      `
                 -ArgumentList $Arguments   `
@@ -886,7 +815,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 -RedirectStandardError  "$($TempDirectory)\$($scriptName)\$($sessionKey)\$($Executable)-StandardError.txt"  `
                 -Passthru
 
-            Write-W2VTrace "Return code was $($ret.ExitCode)."
+            Write-LogMessage "Return code was $($ret.ExitCode)." -logType Debug
 
             if ($ret.ExitCode -ne $SuccessfulErrorCode)
             {
@@ -947,7 +876,6 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
         $disk           = $null
         $openWim        = $null
         $openIso        = $null
-        $openImage      = $null
         $vhdFinalName   = $null
         $vhdFinalPath   = $null
         $mountedHive    = $null
@@ -965,7 +893,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 # WinPE DISM does not support online queries.  This will throw on non-WinPE machines
                 $winpeVersion = (Get-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\WinPE').Version
 
-                Write-W2VInfo "Running WinPE version $winpeVersion"
+                Write-LogMessage "Running WinPE version $winpeVersion" -logType Verbose
 
                 $hyperVEnabled = $false
             }
@@ -995,7 +923,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             }
             catch
             {
-                Write-W2VWarn "Transcription is already running.  No Convert-WindowsImage-specific transcript will be created."
+                Write-LogMessage "Transcription is already running.  No Convert-WindowsImage-specific transcript will be created." -logType Warning
                 $transcripting = $false
             }
 
@@ -1025,7 +953,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             if ($ShowUI)
             {
 
-                Write-W2VInfo "Launching UI..."
+                Write-LogMessage "Launching UI..." -logType Verbose
                 Add-Type -AssemblyName System.Drawing,System.Windows.Forms
 
                 #region Form Objects
@@ -1075,7 +1003,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     if ($ret -ilike "ok")
                     {
                         $WorkingDirectory = $txtWorkingDirectory = $openFolderDialog1.SelectedPath
-                        Write-W2VInfo "Selected Working Directory is $WorkingDirectory..."
+                        Write-LogMessage "Selected Working Directory is $WorkingDirectory..." -logType Verbose
                     }
                 }
 
@@ -1117,14 +1045,14 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
                             if (Test-IsNetworkLocation $openFileDialog1.FileName)
                             {
-                                Write-W2VInfo "Copying ISO $(Split-Path $openFileDialog1.FileName -Leaf) to temp folder..."
-                                Write-W2VWarn "The UI may become non-responsive while this copy takes place..."
+                                Write-LogMessage "Copying ISO $(Split-Path $openFileDialog1.FileName -Leaf) to temp folder..." -logType Verbose
+                                Write-LogMessage "The UI may become non-responsive while this copy takes place..." -logType Warning
                                 Copy-Item -Path $openFileDialog1.FileName -Destination $TempDirectory -Force
                                 $openFileDialog1.FileName = "$($TempDirectory)\$(Split-Path $openFileDialog1.FileName -Leaf)"
                             }
 
                             $txtSourcePath.Text = $isoPath = (Resolve-Path $openFileDialog1.FileName).Path
-                            Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
+                            Write-LogMessage "Opening ISO $(Split-Path $isoPath -Leaf)..." -logType Verbose
 
                             Mount-DiskImage -ImagePath $isoPath -StorageType ISO
                             Get-PSDrive -PSProvider FileSystem | Out-Null #Bugfix to refresh the Drive-List
@@ -1132,32 +1060,39 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                             $openIso     = Get-DiskImage -ImagePath $isoPath
                             $driveLetter = (Get-Volume -DiskImage $openIso).DriveLetter
 
-                            $script:SourcePath  = "$($driveLetter):\sources\install.wim"
-
                             # Check to see if there's a WIM file we can muck about with.
-                            Write-W2VInfo "Looking for $($SourcePath)..."
-                            if (!(Test-Path $SourcePath))
+                            Write-LogMessage "Looking for $($SourcePath)..." -logType Verbose
+
+                            if (Test-Path -Path "$($driveLetter):\sources\install.wim") {
+                                $SourcePath  = "$($driveLetter):\sources\install.wim"
+                            }
+                            elseif (Test-Path -Path "$($driveLetter):\sources\install.esd")
+                            {
+                                $SourcePath  = "$($driveLetter):\sources\install.esd"
+                            }
+                            else
                             {
                                 throw "The specified ISO does not appear to be valid Windows installation media."
                             }
+                            
                         }
                         else
                         {
-                            $txtSourcePath.Text = $script:SourcePath = $openFileDialog1.FileName
+                            $txtSourcePath.Text = $SourcePath = $openFileDialog1.FileName
                         }
 
                         # Check to see if the WIM is local, or on a network location.  If the latter, copy it locally.
                         if (Test-IsNetworkLocation $SourcePath)
                         {
-                            Write-W2VInfo "Copying WIM $(Split-Path $SourcePath -Leaf) to temp folder..."
-                            Write-W2VWarn "The UI may become non-responsive while this copy takes place..."
+                            Write-LogMessage "Copying WIM $(Split-Path $SourcePath -Leaf) to temp folder..." -logType Verbose
+                            Write-LogMessage "The UI may become non-responsive while this copy takes place..." -logType Warning
                             Copy-Item -Path $SourcePath -Destination $TempDirectory -Force
-                            $txtSourcePath.Text = $script:SourcePath = "$($TempDirectory)\$(Split-Path $SourcePath -Leaf)"
+                            $txtSourcePath.Text = $SourcePath = "$($TempDirectory)\$(Split-Path $SourcePath -Leaf)"
                         }
 
-                        $script:SourcePath = (Resolve-Path $SourcePath).Path
+                        $SourcePath = (Resolve-Path $SourcePath).Path
 
-                        Write-W2VInfo "Scanning WIM metadata..."
+                        Write-LogMessage "Scanning WIM metadata..." -logType Verbose
 
                         $tempOpenWim = $null
 
@@ -1193,7 +1128,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                         finally
                         {
                             $tempOpenWim.Close()
-                            Write-W2VTrace "Closing WIM metadata..."
+                            Write-LogMessage "Closing WIM metadata..." -logType Verbose
                         }
                     }
                 }
@@ -1715,7 +1650,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             {
                 if ($SizeBytes -gt $vhdMaxSize)
                 {
-                    Write-W2VWarn "For the VHD file format, the maximum file size is ~2040GB.  We're automatically setting the size to 2040GB for you."
+                    Write-LogMessage "For the VHD file format, the maximum file size is ~2040GB.  We're automatically setting the size to 2040GB for you." -logType Warning
                     $SizeBytes = 2040GB
                 }
 
@@ -1728,8 +1663,9 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 if ($WorkingDirectory -ne $pwd)
                 {
                     # If the WorkingDirectory is anything besides $pwd, tell people that the WorkingDirectory is being ignored.
-                    Write-W2VWarn "Specifying -VHDPath and -WorkingDirectory at the same time is contradictory."
-                    Write-W2VWarn "Ignoring the WorkingDirectory specification."
+                    Write-LogMessage "Specifying -VHDPath and -WorkingDirectory at the same time is contradictory." -logType Warning
+                    Write-LogMessage "Ignoring the WorkingDirectory specification." -logType Warning
+
                     $WorkingDirectory = Split-Path $VHDPath -Parent
                 }
             }
@@ -1764,7 +1700,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 $VHDPath      = Join-Path (Split-Path $VHDPath -Parent) "$($sessionKey).$($VHDFormat.ToLower())"
             }
 
-            Write-W2VTrace "Temporary $VHDFormat path is : $VHDPath"
+            Write-LogMessage "Temporary $VHDFormat path is : $VHDPath" -logType Verbose
 
             # If we're using an ISO, mount it and get the path to the WIM file.
             if (([IO.FileInfo]$SourcePath).Extension -ilike ".ISO")
@@ -1773,7 +1709,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 # or about network latency.
                 if (Test-IsNetworkLocation $SourcePath)
                 {
-                    Write-W2VInfo "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..."
+                    Write-LogMessage "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..." -logType Verbose
                     robocopy $(Split-Path $SourcePath -Parent) $TempDirectory $(Split-Path $SourcePath -Leaf) | Out-Null
                     $SourcePath = "$($TempDirectory)\$(Split-Path $SourcePath -Leaf)"
 
@@ -1782,18 +1718,24 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
                 $isoPath = (Resolve-Path $SourcePath).Path
 
-                Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
+                Write-LogMessage "Opening ISO $(Split-Path $isoPath -Leaf)..." -logType Verbose
                 Mount-DiskImage -ImagePath $isoPath -StorageType ISO
                 Get-PSDrive -PSProvider FileSystem | Out-Null #Bugfix to refresh the Drive-List
                 # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
                 $openIso     = Get-DiskImage -ImagePath $isoPath
                 $driveLetter = (Get-Volume -DiskImage $openIso).DriveLetter
 
-                $SourcePath  = "$($driveLetter):\sources\install.wim"
-
                 # Check to see if there's a WIM file we can muck about with.
-                Write-W2VInfo "Looking for $($SourcePath)..."
-                if (!(Test-Path $SourcePath))
+                Write-LogMessage "Looking for $($SourcePath)..." -logType Verbose
+
+                if (Test-Path -Path "$($driveLetter):\sources\install.wim") {
+                    $SourcePath  = "$($driveLetter):\sources\install.wim"
+                }
+                elseif (Test-Path -Path "$($driveLetter):\sources\install.esd")
+                {
+                    $SourcePath  = "$($driveLetter):\sources\install.esd"
+                }
+                else
                 {
                     throw "The specified ISO does not appear to be valid Windows installation media."
                 }
@@ -1802,7 +1744,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             # Check to see if the WIM is local, or on a network location.  If the latter, copy it locally.
             if (Test-IsNetworkLocation $SourcePath)
             {
-                Write-W2VInfo "Copying WIM $(Split-Path $SourcePath -Leaf) to temp folder..."
+                Write-LogMessage "Copying WIM $(Split-Path $SourcePath -Leaf) to temp folder..." -logType Verbose
                 robocopy $(Split-Path $SourcePath -Parent) $TempDirectory $(Split-Path $SourcePath -Leaf) | Out-Null
                 $SourcePath = "$($TempDirectory)\$(Split-Path $SourcePath -Leaf)"
 
@@ -1815,7 +1757,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             # QUERY WIM INFORMATION AND EXTRACT THE INDEX OF TARGETED IMAGE
             ####################################################################################################
 
-            Write-W2VInfo "Looking for the requested Windows image in the WIM file"
+            Write-LogMessage "Looking for the requested Windows image in the WIM file" -logType Verbose
             $WindowsImage = Get-WindowsImage -ImagePath $SourcePath
 
             if (-not $WindowsImage -or ($WindowsImage -is [System.Array]))
@@ -1839,60 +1781,40 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 }
                 if ($WindowsImage -is [System.Array])
                 {
-                    Write-W2VInfo "WIM file has the following $($WindowsImage.Count) images that match filter *$($Edition)"
+                    Write-LogMessage "WIM file has the following $($WindowsImage.Count) images that match filter *$($Edition)" 
                     Get-WindowsImage -ImagePath $SourcePath
 
-                    Write-W2VError "You must specify an Edition or SKU index, since the WIM has more than one image."
+                    Write-LogMessage "You must specify an Edition or SKU index, since the WIM has more than one image." -logType Error
                     throw "There are more than one images that match ImageName filter *$($Edition)"
                 }
             }
 
             $ImageIndex = $WindowsImage[0].ImageIndex
 
-            # We're good.  Open the WIM container.
-            # NOTE: this is only required because we want to get the XML-based meta-data at the end.  Is there a better way?
-            # If we can get this information from DISM cmdlets, we can remove the openWim constructs
-            $openWim     = New-Object WIM2VHD.WimFile $SourcePath
-
-            $openImage = $openWim[[Int32]$ImageIndex]
-
-            if ($null -eq $openImage)
+            if ($null -eq $ImageIndex)
             {
-                Write-W2VError "The specified edition does not appear to exist in the specified WIM."
-                Write-W2VError "Valid edition names are:"
-                $openWim.Images | %{ Write-W2VError "  $($_.ImageFlags)" }
+                Write-LogMessage "The specified edition does not appear to exist in the specified WIM." -logType Error
+                Write-LogMessage "Valid edition names are: " -logType Error
+                Write-LogMessage $WindowsImage -logType Error
                 throw
             }
 
-            Write-W2VInfo "Image $($openImage.ImageIndex) selected ($($openImage.ImageFlags))..."
-
-            # Check to make sure that the image we're applying is Windows 7 or greater.
-            if ($openImage.ImageVersion -lt $lowestSupportedVersion)
-            {
-                if ($openImage.ImageVersion -eq "0.0.0.0")
-                {
-                    Write-W2VWarn "The specified WIM does not encode the Windows version."
-                }
-                else
-                {
-                    throw "Convert-WindowsImage only supports Windows 7 and Windows 8 WIM files.  The specified image (version $($openImage.ImageVersion)) does not appear to contain one of those operating systems."
-                }
-            }
+            Write-LogMessage "Image $($WindowsImage[0].ImageIndex) selected ($($WindowsImage[0].ImageName))..." -logType Verbose
 
             if ($hyperVEnabled)
             {
                 if (!$IsFixed)
                 {
-                Write-W2VInfo "Creating sparse disk..."
+                Write-LogMessage "Creating sparse disk..." -logType Verbose
                 $newVhd = New-VHD -Path $VHDPath -SizeBytes $SizeBytes -BlockSizeBytes $BlockSizeBytes -Dynamic
                 }
                 else 
                 {
-                Write-W2VInfo "Creating fixed disk..."
+                Write-LogMessage "Creating fixed disk..." -logType Verbose
                 $newVhd = New-VHD -Path $VHDPath -SizeBytes $SizeBytes -BlockSizeBytes $BlockSizeBytes -Fixed
                 }
                 
-                Write-W2VInfo "Mounting $VHDFormat..."
+                Write-LogMessage "Mounting $VHDFormat..." -logType Verbose
                 $disk = $newVhd | Mount-VHD -PassThru | Get-Disk
             }
             else
@@ -1908,7 +1830,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     VirtDisk APIs directly.
                 #>
 
-                Write-W2VInfo "Creating VHD disk..."
+                Write-LogMessage "Creating VHD disk..." -logType Verbose
                 [WIM2VHD.VirtualHardDisk]::CreateVHDDisk(
                     $VHDFormat,
                     $VHDPath,
@@ -1918,7 +1840,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 )
 
                 # Attach the VHD.\
-                Write-W2VInfo "Attaching $VHDFormat..."
+                Write-LogMessage "Attaching $VHDFormat..." -logType Verbose
                 $disk = Mount-DiskImage -ImagePath $VHDPath -PassThru | Get-DiskImage | Get-Disk
             }
 
@@ -1926,24 +1848,24 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             {
                 "BIOS"
                 {
-                    Write-W2VInfo "Initializing disk..."
+                    Write-LogMessage "Initializing disk..." -logType Verbose
                     Initialize-Disk -Number $disk.Number -PartitionStyle MBR
 
                     #
                     # Create the Windows/system partition
                     #
-                    Write-W2VInfo "Creating single partition..."
+                    Write-LogMessage "Creating single partition..." -logType Verbose
                     $systemPartition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -MbrType IFS -IsActive
                     $windowsPartition = $systemPartition
 
-                    Write-W2VInfo "Formatting windows volume..."
+                    Write-LogMessage "Formatting windows volume..." -logType Verbose
                     $systemVolume = Format-Volume -Partition $systemPartition -FileSystem NTFS -Force -Confirm:$false
                     $windowsVolume = $systemVolume
                 }
 
                 "UEFI"
                 {
-                    Write-W2VInfo "Initializing disk..."
+                    Write-LogMessage "Initializing disk..." -logType Verbose
                     Initialize-Disk -Number $disk.Number -PartitionStyle GPT
 
                     if ((Get-WindowsBuildNumber) -ge 10240)
@@ -1951,13 +1873,13 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                         #
                         # Create the system partition.  Create a data partition so we can format it, then change to ESP
                         #
-                        Write-W2VInfo "Creating EFI system partition..."
+                        Write-LogMessage "Creating EFI system partition..." -logType Verbose
                         $systemPartition = New-Partition -DiskNumber $disk.Number -Size 200MB -GptType '{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}'
 
-                        Write-W2VInfo "Formatting system volume..."
+                        Write-LogMessage "Formatting system volume..." -logType Verbose
                         $systemVolume = Format-Volume -Partition $systemPartition -FileSystem FAT32 -Force -Confirm:$false
 
-                        Write-W2VInfo "Setting system partition as ESP..."
+                        Write-LogMessage "Setting system partition as ESP..." -logType Verbose
                         $systemPartition | Set-Partition -GptType '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}'
                         $systemPartition | Add-PartitionAccessPath -AssignDriveLetter
                     }
@@ -1966,10 +1888,10 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                         #
                         # Create the system partition
                         #
-                        Write-W2VInfo "Creating EFI system partition (ESP)..."
+                        Write-LogMessage "Creating EFI system partition (ESP)..." -logType Verbose
                         $systemPartition = New-Partition -DiskNumber $disk.Number -Size 200MB -GptType '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}' -AssignDriveLetter
 
-                        Write-W2VInfo "Formatting ESP..."
+                        Write-LogMessage "Formatting ESP..." -logType Verbose
                         $formatArgs = @(
                             "$($systemPartition.DriveLetter):", # Partition drive letter
                             "/FS:FAT32",                        # File system
@@ -1983,40 +1905,40 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     #
                     # Create the reserved partition
                     #
-                    Write-W2VInfo "Creating MSR partition..."
+                    Write-LogMessage "Creating MSR partition..." -logType Verbose
                     $reservedPartition = New-Partition -DiskNumber $disk.Number -Size 128MB -GptType '{e3c9e316-0b5c-4db8-817d-f92df00215ae}'
 
                     #
                     # Create the Windows partition
                     #
-                    Write-W2VInfo "Creating windows partition..."
+                    Write-LogMessage "Creating windows partition..." -logType Verbose
                     $windowsPartition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -GptType '{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}'
 
-                    Write-W2VInfo "Formatting windows volume..."
+                    Write-LogMessage "Formatting windows volume..." -logType Verbose
                     $windowsVolume = Format-Volume -Partition $windowsPartition -FileSystem NTFS -Force -Confirm:$false
                 }
 
                 "WindowsToGo"
                 {
-                    Write-W2VInfo "Initializing disk..."
+                    Write-LogMessage "Initializing disk..." -logType Verbose
                     Initialize-Disk -Number $disk.Number -PartitionStyle MBR
 
                     #
                     # Create the system partition
                     #
-                    Write-W2VInfo "Creating system partition..."
+                    Write-LogMessage "Creating system partition..." -logType Verbose
                     $systemPartition = New-Partition -DiskNumber $disk.Number -Size 350MB -MbrType FAT32 -IsActive
 
-                    Write-W2VInfo "Formatting system volume..."
+                    Write-LogMessage "Formatting system volume..." -logType Verbose
                     $systemVolume    = Format-Volume -Partition $systemPartition -FileSystem FAT32 -Force -Confirm:$false
 
                     #
                     # Create the Windows partition
                     #
-                    Write-W2VInfo "Creating windows partition..."
+                    Write-LogMessage "Creating windows partition..." -logType Verbose
                     $windowsPartition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -MbrType IFS
 
-                    Write-W2VInfo "Formatting windows volume..."
+                    Write-LogMessage "Formatting windows volume..." -logType Verbose
                     $windowsVolume    = Format-Volume -Partition $windowsPartition -FileSystem NTFS -Force -Confirm:$false
                 }
             }
@@ -2052,21 +1974,21 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             }
 
             $windowsDrive = $(Get-Partition -Volume $windowsVolume).AccessPaths[0].substring(0,2)
-            Write-W2VInfo "Windows path ($windowsDrive) has been assigned."
-            Write-W2VInfo "Windows path ($windowsDrive) took $attempts attempts to be assigned."
+            Write-LogMessage "Windows path ($windowsDrive) has been assigned." -logType Verbose
+            Write-LogMessage "Windows path ($windowsDrive) took $attempts attempts to be assigned." -logType Verbose
 
             #
             # Refresh access paths (we have now formatted the volume)
             #
             $systemPartition = $systemPartition | Get-Partition
             $systemDrive = $systemPartition.AccessPaths[0].trimend("\").replace("\?", "??")
-            Write-W2VInfo "System volume location: $systemDrive"
+            Write-LogMessage "System volume location: $systemDrive" -logType Verbose
 
             ####################################################################################################
             # APPLY IMAGE FROM WIM TO THE NEW VHD
             ####################################################################################################
 
-            Write-W2VInfo "Applying image to $VHDFormat. This could take a while..."
+            Write-LogMessage "Applying image to $VHDFormat. This could take a while..." -logType Verbose
             if ((Get-Command Expand-WindowsImage -ErrorAction SilentlyContinue) -and ((-not $ApplyEA) -and ([string]::IsNullOrEmpty($DismPath))))
             {
                 Expand-WindowsImage -ApplyPath $windowsDrive -ImagePath $SourcePath -Index $ImageIndex -LogPath "$($logFolder)\DismLogs.log" | Out-Null
@@ -2089,7 +2011,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 }
 
                 $dismArgs = @("$applyImage /ImageFile:`"$SourcePath`" /Index:$ImageIndex /ApplyDir:$windowsDrive /LogPath:`"$($logFolder)\DismLogs.log`"")
-                Write-W2VInfo "Applying image: $dismPath $dismArgs"
+                Write-LogMessage "Applying image: $dismPath $dismArgs" -logType Verbose
                 $process  = Start-Process -Passthru -Wait -NoNewWindow -FilePath $dismPath `
                             -ArgumentList $dismArgs `
 
@@ -2098,7 +2020,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
  	                throw "Image Apply failed! See DismImageApply logs for details"
                 }
             }
-            Write-W2VInfo "Image was applied successfully. "
+            Write-LogMessage "Image was applied successfully. " -logType Verbose
 
             #
             # Here we copy in the unattend file (if specified by the command line)
@@ -2106,31 +2028,30 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             Get-PSDrive -PSProvider FileSystem | Out-Null
             if (![string]::IsNullOrEmpty($UnattendPath))
             {
-                Write-W2VInfo "Applying unattend file ($(Split-Path $UnattendPath -Leaf))..."
+                Write-LogMessage "Applying unattend file ($(Split-Path $UnattendPath -Leaf))..." -logType Verbose
                 Copy-Item -Path $UnattendPath -Destination (Join-Path $windowsDrive "unattend.xml") -Force
             }
 
             if (![string]::IsNullOrEmpty($MergeFolderPath))
             {
-                Write-W2VInfo "Applying merge folder ($MergeFolderPath)..."
+                Write-LogMessage "Applying merge folder ($MergeFolderPath)..." -logType Verbose
                 Copy-Item -Recurse -Path (Join-Path $MergeFolderPath "*") -Destination $windowsDrive -Force #added to handle merge folders
             }
 
-            if (($openImage.ImageArchitecture -ne "ARM") -and       # No virtualization platform for ARM images
-                ($openImage.ImageArchitecture -ne "ARM64") -and     # No virtualization platform for ARM64 images
+            if (($WindowsImage[0].ImageDescription -notlike "*ARM*") -and      # No virtualization platform for ARM images
                 ($BCDinVHD -ne "NativeBoot"))                       # User asked for a non-bootable image
             {
                 if (Test-Path "$($systemDrive)\boot\bcd")
                 {
-                    Write-W2VInfo "Image already has BIOS BCD store..."
+                    Write-LogMessage "Image already has BIOS BCD store..." -logType Verbose
                 }
                 elseif (Test-Path "$($systemDrive)\efi\microsoft\boot\bcd")
                 {
-                    Write-W2VInfo "Image already has EFI BCD store..."
+                    Write-LogMessage "Image already has EFI BCD store..." -logType Verbose
                 }
                 else
                 {
-                    Write-W2VInfo "Making image bootable..."
+                    Write-LogMessage "Making image bootable..." -logType Verbose
                     $bcdBootArgs = @(
                         "$($windowsDrive)\Windows", # Path to the \Windows on the VHD
                         "/s $systemDrive",          # Specifies the volume letter of the drive to create the \BOOT folder on.
@@ -2166,7 +2087,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
                     if ($DiskLayout -eq "BIOS")
                     {
-                        Write-W2VInfo "Fixing the Device ID in the BCD store on $($VHDFormat)..."
+                        Write-LogMessage "Fixing the Device ID in the BCD store on $($VHDFormat)..." -logType Verbose
                         Run-Executable -Executable "BCDEDIT.EXE" -Arguments (
                             "/store $($systemDrive)\boot\bcd",
                             "/set `{bootmgr`} device locate"
@@ -2182,7 +2103,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     }
                 }
 
-                Write-W2VInfo "Drive is bootable.  Cleaning up..."
+                Write-LogMessage "Drive is bootable.  Cleaning up..." -logType Verbose
 
                 # Are we turning the debugger on?
                 if ($EnableDebugger -inotlike "None")
@@ -2244,7 +2165,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     {
                         if (Test-Path $bcdStore)
                         {
-                            Write-W2VInfo "Turning kernel debugging on in the $($VHDFormat) for $($bcdStore)..."
+                            Write-LogMessage "Turning kernel debugging on in the $($VHDFormat) for $($bcdStore)..." -logType Verbose
                             Run-Executable -Executable "BCDEDIT.EXE" -Arguments (
                                 "/store $($bcdStore)",
                                 "/set `{default`} debug on"
@@ -2263,7 +2184,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 # if we're native booting, the changes need to be made to the BCD store on the
                 # physical computer's boot volume.
 
-                Write-W2VInfo "Image applied. It is not bootable."
+                Write-LogMessage "Image applied. It is not bootable." -logType Verbose
             }
 
             if ($RemoteDesktopEnable -or (-not $ExpandOnNativeBoot))
@@ -2272,13 +2193,13 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
                 if ($RemoteDesktopEnable)
                 {
-                    Write-W2VInfo -text "Enabling Remote Desktop"
+                    Write-LogMessage "Enabling Remote Desktop" -logType Verbose
                     Set-ItemProperty -Path "HKLM:\$($hive)\ControlSet001\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
                 }
 
                 if (-not $ExpandOnNativeBoot)
                 {
-                    Write-W2VInfo -text "Disabling automatic $VHDFormat expansion for Native Boot"
+                    Write-LogMessage "Disabling automatic $VHDFormat expansion for Native Boot" -logType Verbose
                     Set-ItemProperty -Path "HKLM:\$($hive)\ControlSet001\Services\FsDepends\Parameters" -Name "VirtualDiskExpandOnMount" -Value 4
                 }
 
@@ -2287,27 +2208,27 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
             if ($Driver)
             {
-                Write-W2VInfo -text "Adding Windows Drivers to the Image"
+                Write-LogMessage "Adding Windows Drivers to the Image" -logType Verbose
                 $Driver | ForEach-Object -Process {
-                    Write-W2VInfo -text "Driver path: $PSItem"
+                    Write-LogMessage "Driver path: $PSItem" -logType Verbose
                     Add-WindowsDriver -Path $windowsDrive -Recurse -Driver $PSItem -Verbose | Out-Null
                 }
             }
 
             If ($Feature)
             {
-                Write-W2VInfo -text "Installing Windows Feature(s) $Feature to the Image"
+                Write-LogMessage "Installing Windows Feature(s) $Feature to the Image" -logType Verbose
                 $FeatureSourcePath = Join-Path -Path "$($driveLetter):" -ChildPath "sources\sxs"
-                Write-W2VInfo -text "From $FeatureSourcePath"
+                Write-LogMessage "From $FeatureSourcePath" -logType Verbose
                 Enable-WindowsOptionalFeature -FeatureName $Feature -Source $FeatureSourcePath -Path $windowsDrive -All | Out-Null
             }
 
             if ($Package)
             {
-                Write-W2VInfo -text "Adding Windows Packages to the Image"
+                Write-LogMessage "Adding Windows Packages to the Image" -logType Verbose
 
                 $Package | ForEach-Object -Process {
-                    Write-W2VInfo -text "Package path: $PSItem"
+                    Write-LogMessage "Package path: $PSItem" -logType Verbose
                     Add-WindowsPackage -Path $windowsDrive -PackagePath $PSItem | Out-Null
                 }
             }
@@ -2323,7 +2244,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             if ([String]::IsNullOrEmpty($vhdFinalName))
             {
                 # We need to generate a file name.
-                Write-W2VInfo "Generating name for $($VHDFormat)..."
+                Write-LogMessage "Generating name for $($VHDFormat)..." -logType Verbose
                 $hive         = Mount-RegistryHive -Hive (Join-Path $windowsDrive "Windows\System32\Config\Software")
 
                 $buildLabEx   = (Get-ItemProperty "HKLM:\$($hive)\Microsoft\Windows NT\CurrentVersion").BuildLabEx
@@ -2358,31 +2279,31 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 #
                 # ISSUE - do we want VL here?
                 #
-                $vhdFinalName = "$($buildLabEx)_$($skuFamily)_$($editionId)_$($openImage.ImageDefaultLanguage).$($VHDFormat.ToLower())"
-                Write-W2VTrace "$VHDFormat final name is : $vhdFinalName"
+                $vhdFinalName = "$($buildLabEx)_$($skuFamily)_$($editionId)_$($WindowsImage[0].ImageDefaultLanguage).$($VHDFormat.ToLower())"
+                Write-LogMessage "$VHDFormat final name is : $vhdFinalName" -logType Debug
             }
 
             if ($hyperVEnabled)
             {
-                Write-W2VInfo "Dismounting $VHDFormat..."
+                Write-LogMessage "Dismounting $VHDFormat..." -logType Verbose
                 Dismount-VHD -Path $VHDPath
             }
             else
             {
-                Write-W2VInfo "Closing $VHDFormat..."
+                Write-LogMessage "Closing $VHDFormat..." -logType Verbose
                 Dismount-DiskImage -ImagePath $VHDPath
             }
 
             $vhdFinalPath = Join-Path (Split-Path $VHDPath -Parent) $vhdFinalName
-            Write-W2VTrace "$VHDFormat final path is : $vhdFinalPath"
+            Write-LogMessage "$VHDFormat final path is : $vhdFinalPath" -logType Debug
 
             if (Test-Path $vhdFinalPath)
             {
-                Write-W2VInfo "Deleting pre-existing $VHDFormat : $(Split-Path $vhdFinalPath -Leaf)..."
+                Write-LogMessage "Deleting pre-existing $VHDFormat : $(Split-Path $vhdFinalPath -Leaf)..." -logType Verbose
                 Remove-Item -Path $vhdFinalPath -Force
             }
 
-            Write-W2VTrace -Text "Renaming $VHDFormat at $VHDPath to $vhdFinalName"
+            Write-LogMessage "Renaming $VHDFormat at $VHDPath to $vhdFinalName" -logType Debug
             Rename-Item -Path (Resolve-Path $VHDPath).Path -NewName $vhdFinalName -Force
             $vhd += Get-DiskImage -ImagePath $vhdFinalPath
 
@@ -2390,22 +2311,22 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
         }
         catch
         {
-            Write-W2VError $_
-            Write-W2VInfo "Log folder is $logFolder"
+            Write-LogMessage $_ -logType Error
+            Write-LogMessage "Log folder is $logFolder" -logType Verbose
         }
         finally
         {
             # If we still have a WIM image open, close it.
             if ($openWim -ne $null)
             {
-                Write-W2VInfo "Closing Windows image..."
+                Write-LogMessage "Closing Windows image..." -logType Verbose
                 $openWim.Close()
             }
 
             # If we still have a registry hive mounted, dismount it.
             if ($mountedHive -ne $null)
             {
-                Write-W2VInfo "Closing registry hive..."
+                Write-LogMessage "Closing registry hive..." -logType Verbose
                 Dismount-RegistryHive -HiveMountPoint $mountedHive
             }
 
@@ -2428,7 +2349,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             # If we still have an ISO open, close it.
             if ($openIso -ne $null)
             {
-                Write-W2VInfo "Closing ISO..."
+                Write-LogMessage "Closing ISO..." -logType Verbose
                 Dismount-DiskImage $ISOPath
             }
 
@@ -2441,7 +2362,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             }
 
             # Close out the transcript and tell the user we're done.
-            Write-W2VInfo "Done."
+            Write-LogMessage "Done." -logType Verbose
             if ($transcripting)
             {
                 $null = Stop-Transcript
@@ -2460,6 +2381,24 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
 }
 
+function Write-LogMessage
+{
+	[cmdletBinding()]
+	param (
+        [Parameter(Position=0,Mandatory=$True, ValueFromPipeline)][String]$message,
+        [Parameter(Position=1,Mandatory=$False)]
+        [ValidateSet('Verbose', 'Debug', 'Error', 'Output', 'Warning', 'Host')][String]$logType = "Output"
+        )
+	$message = "{0:s} [{1}] $message" -f [DateTime]::UtcNow, $env:computername
+	switch ($logType) {
+		"Verbose" { $message | Write-Verbose}
+		"Debug"   { $message | Write-Debug}
+		"Error"   { $message | Write-Error}
+        "Warning" { $message | Write-Warning} 
+        "Host"    { $message | Write-Host}
+		default   { $message | Write-Output}
+	}
+}
 
 function
 Add-WindowsImageTypes
