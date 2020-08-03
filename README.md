@@ -15,7 +15,7 @@ Creates a Windows VM for Hyper-V from a Windows-ISO
 
 ## Requirements
 
-The script needs Powershell 5.1 on a Windows System with administrator rights. ISE is currently not supported
+The script needs Powershell 5.1 on a Windows System with administrator rights. Powershell ISE is currently supported, but will be deprecated in further releases, according microsofts policy. Consider using Visual Studio Code.
 
 ## License
 
