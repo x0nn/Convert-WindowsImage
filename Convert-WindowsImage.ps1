@@ -1749,6 +1749,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 $SourcePath = "$($TempDirectory)\$(Split-Path $SourcePath -Leaf)"
 
                 $tempSource = $SourcePath
+                $tempSource = (Get-Item -LiteralPath $tempSource).FullName
             }
 
             $SourcePath  = (Resolve-Path $SourcePath).Path
@@ -2389,6 +2390,8 @@ function Write-LogMessage
         [Parameter(Position=1,Mandatory=$False)]
         [ValidateSet('Verbose', 'Debug', 'Error', 'Output', 'Warning', 'Host')][String]$logType = "Output"
         )
+    $message = $message.replace("{","{{")
+    $message = $message.replace("}","}}")
 	$message = "{0:s} [{1}] $message" -f [DateTime]::UtcNow, $env:computername
 	switch ($logType) {
 		"Verbose" { $message | Write-Verbose}
