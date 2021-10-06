@@ -1749,6 +1749,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 $SourcePath = "$($TempDirectory)\$(Split-Path $SourcePath -Leaf)"
 
                 $tempSource = $SourcePath
+                $tempSource = (Get-Item -LiteralPath $tempSource).FullName
             }
 
             $SourcePath  = (Resolve-Path $SourcePath).Path
@@ -2017,7 +2018,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
                 if ($process.ExitCode -ne 0)
                 {
- 	                throw "Image Apply failed! See DismImageApply logs for details"
+                    throw "Image Apply failed! See DismImageApply logs for details"
                 }
             }
             Write-LogMessage "Image was applied successfully. " -logType Verbose
@@ -2383,21 +2384,23 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
 function Write-LogMessage
 {
-	[cmdletBinding()]
-	param (
+    [cmdletBinding()]
+    param (
         [Parameter(Position=0,Mandatory=$True, ValueFromPipeline)][String]$message,
         [Parameter(Position=1,Mandatory=$False)]
         [ValidateSet('Verbose', 'Debug', 'Error', 'Output', 'Warning', 'Host')][String]$logType = "Output"
         )
-	$message = "{0:s} [{1}] $message" -f [DateTime]::UtcNow, $env:computername
-	switch ($logType) {
-		"Verbose" { $message | Write-Verbose}
-		"Debug"   { $message | Write-Debug}
-		"Error"   { $message | Write-Error}
+    $message = $message.replace("{","{{")
+    $message = $message.replace("}","}}")
+    $message = "{0:s} [{1}] $message" -f [DateTime]::UtcNow, $env:computername
+    switch ($logType) {
+        "Verbose" { $message | Write-Verbose}
+        "Debug"   { $message | Write-Debug}
+        "Error"   { $message | Write-Error}
         "Warning" { $message | Write-Warning} 
         "Host"    { $message | Write-Host}
-		default   { $message | Write-Output}
-	}
+        default   { $message | Write-Output}
+    }
 }
 
 function
