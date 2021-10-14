@@ -3,22 +3,33 @@ Convert-WindowsImage
 {
     <#
     .NOTES
-        Copyright (c) Microsoft Corporation.  All rights reserved.
-        Copyright (c) x0nn
+        Version:        21H2
 
-        Use of this sample source code is subject to the terms of the Microsoft
-        license agreement under which you licensed this sample source code. If
-        you did not accept the terms of the license agreement, you are not
-        authorized to use this sample source code. For the terms of the license,
-        please see the license agreement between you and Microsoft or, if applicable,
-        see the LICENSE.RTF on your install media or the root of your tools installation.
-        THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES.
+        License:        GPLv3 or any later
+        
+        Convert-WindowsImage - Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
+    
+        Copyright (c) Microsoft Corporation.  All rights reserved.
+        Copyright (c) 2019 x0nn
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
     .SYNOPSIS
-        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016, 2019 installation media.
+        Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
 
     .DESCRIPTION
-        Creates a bootable VHD(X) based on Windows 7,8, 10 or Windows Server 2012, 2012R2, 2016, 2019 installation media.
+        Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
 
     .PARAMETER SourcePath
         The complete path to the WIM or ISO file that will be converted to a Virtual Hard Disk.
@@ -71,7 +82,7 @@ Convert-WindowsImage
         The complete path to an unattend.xml file that can be injected into the VHD(X).
 
     .PARAMETER Edition
-        The name or image index of the image to apply from the WIM. Use the DISM-Powershell Module to get the names.
+        The name or image index of the image to apply from the WIM. Use the DISM-Powershell Module to get the names or use -Edition "LIST" as parameter.
 
     .PARAMETER Passthru
         Specifies that the full path to the VHD(X) that is created should be
@@ -182,7 +193,7 @@ Convert-WindowsImage
     #>
     #Requires -Version 3.0
     [CmdletBinding(DefaultParameterSetName="SRC",
-        HelpURI="https://github.com/Microsoft/Virtualization-Documentation/tree/master/hyperv-tools/Convert-WindowsImage")]
+        HelpURI="https://github.com/x0nn/Convert-WindowsImage#readme")]
 
     param(
         [Parameter(ParameterSetName="SRC", Mandatory=$true, ValueFromPipeline=$true)]
@@ -243,8 +254,8 @@ Convert-WindowsImage
         [Parameter(ParameterSetName="SRC")]
         [Alias("MergeFolder")]
         [string]
-        [ValidateNotNullOrEmpty()]
-        $MergeFolderPath = "",
+        [ValidateScript({ Test-Path $(Resolve-Path $_) })]
+        $MergeFolderPath = $null,
 
         [Parameter(ParameterSetName="SRC", Mandatory=$true)]
         [Alias("Layout")]
@@ -301,7 +312,7 @@ Convert-WindowsImage
         [string]
         [ValidateNotNullOrEmpty()]
         [ValidateScript({ Test-Path $(Resolve-Path $_) })]
-        $UnattendPath,
+        $UnattendPath = $null,
 
         [Parameter(ParameterSetName="SRC")]
         [Parameter(ParameterSetName="UI")]
@@ -328,6 +339,18 @@ Convert-WindowsImage
     # Create the parameters for the various types of debugging.
     DynamicParam
     {
+        # Get rid of the Windows ShortName mess
+        $SourcePath = (Get-Item -LiteralPath $SourcePath).FullName
+        
+        if (![String]::IsNullOrWhiteSpace($WorkingDirectory)) {$WorkingDirectory = (Get-Item -LiteralPath $WorkingDirectory).FullName}
+        if (![String]::IsNullOrWhiteSpace($TempDirectory)) { $TempDirectory = (Get-Item -LiteralPath $TempDirectory).FullName}
+        if (![String]::IsNullOrWhiteSpace($MergeFolderPath)) { $MergeFolderPath = (Get-Item -LiteralPath $MergeFolderPath).FullName}
+        if (![String]::IsNullOrWhiteSpace($UnattendPath)) { $UnattendPath = (Get-Item -LiteralPath $UnattendPath).FullName}
+
+        # Since we use the VHDFormat in output, make it uppercase.
+        # We'll make it lowercase again when we use it as a file extension.
+        $VHDFormat              = $VHDFormat.ToUpper()
+
         Set-StrictMode -version 3
 
         # Set up the dynamic parameters.
@@ -624,9 +647,6 @@ Convert-WindowsImage
         $lowestSupportedBuild   = 9200                                         # The lowest supported *host* build.  Set to Win8 CP.
         $transcripting          = $false
 
-        # Since we use the VHDFormat in output, make it uppercase.
-        # We'll make it lowercase again when we use it as a file extension.
-        $VHDFormat              = $VHDFormat.ToUpper()
         ##########################################################################################
         #                                      Here Strings
         ##########################################################################################
@@ -634,8 +654,9 @@ Convert-WindowsImage
         # Banner text displayed during each run.
         $header    = @"
 
-Windows(R) Image to Virtual Hard Disk Converter for Windows(R) 10
+Windows(R) Image to Virtual Hard Disk Converter for Windows(R)
 Copyright (C) Microsoft Corporation.  All rights reserved.
+Copyright (C) 2019 x0nn
 Version $myVersion
 
 "@
@@ -805,7 +826,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
             )
 
-            Write-LogMessage "Running $Executable $Arguments" -logType Debug
+            Write-LogMessage "Running $Executable $(($Arguments | Out-String).Replace("`r`n"," "))" -logType Debug
             $ret = Start-Process           `
                 -FilePath $Executable      `
                 -ArgumentList $Arguments   `
@@ -1628,17 +1649,14 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 $frmMain.Dispose()
             }
 
-            if ($VHDFormat -ilike "AUTO")
-            {
-                if ($DiskLayout -eq "BIOS")
+             if ($VHDFormat -ilike "AUTO")
+             {
+                switch (([IO.FileInfo]$VHDPath).Extension.ToUpper())
                 {
-                    $VHDFormat = "VHD"
+                    ".VHD" { $VHDFormat = "VHD" }
+                    ".VHDX" { $VHDFormat = "VHDX" }
                 }
-                else
-                {
-                    $VHDFormat = "VHDX"
-                }
-            }
+             }
 
             #
             # Choose smallest supported block size for dynamic VHD(X)
@@ -1673,11 +1691,11 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             if ($VHDPath)
             {
                 # Check to see if there's a conflict between the specified file extension and the VHDFormat being used.
-                $ext = ([IO.FileInfo]$VHDPath).Extension
+                $extension = ([IO.FileInfo]$VHDPath).Extension.ToUpper()
 
-                if (!($ext -ilike ".$($VHDFormat)"))
+                if (!($extension -ilike ".$($VHDFormat)"))
                 {
-                    throw "There is a mismatch between the VHDPath file extension ($($ext.ToUpper())), and the VHDFormat (.$($VHDFormat)).  Please ensure that these match and try again."
+                    throw "There is a mismatch between the VHDPath file extension ($($extension.ToUpper())), and the VHDFormat (.$($VHDFormat)).  Please ensure that these match and try again."
                 }
             }
 
@@ -1758,9 +1776,9 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             ####################################################################################################
 
             Write-LogMessage "Looking for the requested Windows image in the WIM file" -logType Verbose
-            $WindowsImage = Get-WindowsImage -ImagePath $SourcePath
+            $WindowsImages = Get-WindowsImage -ImagePath $SourcePath
 
-            if (-not $WindowsImage -or ($WindowsImage -is [System.Array]))
+            if (-not $WindowsImages -or ($WindowsImages -is [System.Array]))
             {
                 #
                 # WIM may have multiple images.  Filter on Edition (can be index or name) and try to find a unique image
@@ -1777,6 +1795,10 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 
                 if (-not $WindowsImage)
                 {
+                    Write-LogMessage "The selected Edtion was not found on the WIM file. The following images are available:" -logType Warning
+
+                    $WindowsImages | ForEach-Object {Write-LogMessage "$($_.ImageName) (Index: $($_.ImageIndex))" -logType Warning}
+
                     throw "Requested windows Image was not found on the WIM file!"
                 }
                 if ($WindowsImage -is [System.Array])
@@ -2389,7 +2411,7 @@ function Write-LogMessage
         [Parameter(Position=1,Mandatory=$False)]
         [ValidateSet('Verbose', 'Debug', 'Error', 'Output', 'Warning', 'Host')][String]$logType = "Output"
         )
-	$message = "{0:s} [{1}] $message" -f [DateTime]::UtcNow, $env:computername
+		$message = "{0:s} [{1}] $($message.Replace("{","{{").Replace("}","}}"))" -f [DateTime]::UtcNow, $env:computername
 	switch ($logType) {
 		"Verbose" { $message | Write-Verbose}
 		"Debug"   { $message | Write-Debug}
