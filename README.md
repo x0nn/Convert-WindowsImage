@@ -2,13 +2,13 @@
 Creates a Windows VM for Hyper-V from a Windows-ISO
 
 Currently **supported and tested**:
-    - Windows 7, 8, 8.1
-	- WIndows 10 / all versions up to 21H1
-	- **new** Windows 11 / all versions up to 21H1 in UEFI **and** BIOS-DiskLayout
-    - Windows Server 2016 / 2019 / **new** 2022
-    - It should work for all versions from Windows 7 up to 11. Please file a bug report, if a version does not work.
+- Windows 7, 8, 8.1
+- Windows 10 / all versions up to 21H1
+- **new** Windows 11 / all versions up to 21H1 in UEFI **and** BIOS-DiskLayout
+- Windows Server 2016 / 2019 / **new** 2022
+- It should work for all versions from Windows 7 up to 11. Please file a bug report, if a version does not work.
 
-	- VM's run on Hyper-V (DiskLayout: BIOS uses Gen1-VM, UEFI uses Gen2-VM)
+VM's run on Hyper-V (DiskLayout: BIOS uses Gen1-VM, UEFI uses Gen2-VM)
 
 ## Examples
 
@@ -17,12 +17,7 @@ Currently **supported and tested**:
 
 2. Create a Windows Server 2019 VM
 
-`Convert-WindowsImage -SourcePath "C:\Temp\windowsServer2019.iso" 
-                    -VHDFormat "VHDX"
-                    -Edition "Windows Server 2019 Standard" 
-					-SizeBytes 50GB
-                    -DiskLayout "UEFI"
-                    -VHDPath "C:\Temp\windowsServer2019.vhdx"`
+`Convert-WindowsImage -SourcePath "C:\Temp\windowsServer2019.iso" -VHDFormat "VHDX" -Edition "Windows Server 2019 Standard" -SizeBytes 50GB -DiskLayout "UEFI" -VHDPath "C:\Temp\windowsServer2019.vhdx"`
 					
 If you don't know the Edition, use -Edition "LIST" and the script will fail, but *list all editions in the ISO/WIM-file*.
 
@@ -41,9 +36,9 @@ Please attach/post the transcript to the issue.
 ## Requirements
 
 The script needs
-	- **exact** Powershell 5.1 on a 
-	- Windows Host (lowest is Windows 8, but Windows 10 is recommended) with 
-	- **administrator rights**
+- **exact** Powershell 5.1 on a 
+- Windows Host (lowest is Windows 8, but Windows 10 is recommended) with 
+- **administrator rights**
 	
 Powershell ISE is currently supported, but will be deprecated in further releases, according microsofts policy. Consider using Visual Studio Code.
 
