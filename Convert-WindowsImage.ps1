@@ -2060,7 +2060,9 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 Copy-Item -Recurse -Path (Join-Path $MergeFolderPath "*") -Destination $windowsDrive -Force #added to handle merge folders
             }
 
-            if (( $openImage.ImageArchitecture -ne "ARM" ) -and       # No virtualization platform for ARM images, ARM64 is supported now
+            $openWim = New-Object -TypeName "WIM2VHD.WimFile" -ArgumentList $SourcePath
+
+            if (($openWim.Images[$WindowsImage.ImageIndex].ImageArchitecture -ne "ARM") -and  # No virtualization platform for ARM images, ARM64 is supported now
                 ( $BcdInVhd -ne "NativeBoot" ))                       # User asked for a non-bootable image
             {
                 if (Test-Path "$($systemDrive)\boot\bcd")
