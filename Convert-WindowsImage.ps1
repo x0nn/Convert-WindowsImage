@@ -628,8 +628,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
 "@
 
         # Get rid of the Windows ShortName mess
-        $SourcePath = (Get-Item -LiteralPath $SourcePath).FullName
-        
+        if (![String]::IsNullOrWhiteSpace($SourcePath)) { $SourcePath = (Get-Item -LiteralPath $SourcePath).FullName }        
         if (![String]::IsNullOrWhiteSpace($WorkingDirectory)) { $WorkingDirectory = (Get-Item -LiteralPath $WorkingDirectory).FullName }
         if (![String]::IsNullOrWhiteSpace($TempDirectory)) { $TempDirectory = (Get-Item -LiteralPath $TempDirectory).FullName }
         if (![String]::IsNullOrWhiteSpace($MergeFolderPath)) { $MergeFolderPath = (Get-Item -LiteralPath $MergeFolderPath).FullName }
