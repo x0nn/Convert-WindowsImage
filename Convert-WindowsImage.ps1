@@ -3,7 +3,7 @@ Convert-WindowsImage
 {
     <#
     .NOTES
-        Version:        21H2
+        Version:        21H2-20211016
 
         License:        GPLv3 or any later
         
@@ -349,7 +349,7 @@ Convert-WindowsImage
 
         # Since we use the VHDFormat in output, make it uppercase.
         # We'll make it lowercase again when we use it as a file extension.
-        $VHDFormat              = $VHDFormat.ToUpper()
+        if (![String]::IsNullOrWhiteSpace($VHDFormat)) {$VHDFormat = $VHDFormat.ToUpper()}
 
         Set-StrictMode -version 3
 
@@ -2060,8 +2060,8 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 Copy-Item -Recurse -Path (Join-Path $MergeFolderPath "*") -Destination $windowsDrive -Force #added to handle merge folders
             }
 
-            if (($WindowsImage[0].ImageDescription -notlike "*ARM*") -and      # No virtualization platform for ARM images
-                ($BCDinVHD -ne "NativeBoot"))                       # User asked for a non-bootable image
+            if (( $openImage.ImageArchitecture -ne "ARM" ) -and       # No virtualization platform for ARM images, ARM64 is supported now
+                ( $BcdInVhd -ne "NativeBoot" ))                       # User asked for a non-bootable image
             {
                 if (Test-Path "$($systemDrive)\boot\bcd")
                 {
@@ -2073,6 +2073,20 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 }
                 else
                 {
+                    $BcdEdit = "BCDEDIT.EXE"
+                    
+                        If (Test-Path -Path "$($env:WINDIR)\sysnative\")
+                        {
+                            Write-Verbose -Message "Powershell is not running as native, switching to sysnative paths for native tools"
+                            $BcdEdit = Join-Path -Path "$($env:WINDIR)\sysnative\" -ChildPath $BcdEdit
+
+                            # Update bcdboot parameter only if not specified by caller
+                            If (-Not $PSBoundParameters.ContainsKey('BcdBoot'))
+                            {
+                                $BcdBoot = Join-Path -Path "$($env:WINDIR)\sysnative\" -ChildPath $BcdBoot
+                            }
+                        }
+
                     Write-LogMessage "Making image bootable..." -logType Verbose
                     $bcdBootArgs = @(
                         "$($windowsDrive)\Windows", # Path to the \Windows on the VHD
@@ -2110,15 +2124,15 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     if ($DiskLayout -eq "BIOS")
                     {
                         Write-LogMessage "Fixing the Device ID in the BCD store on $($VHDFormat)..." -logType Verbose
-                        Run-Executable -Executable "BCDEDIT.EXE" -Arguments (
+                        Run-Executable -Executable $BcdEdit -Arguments (
                             "/store $($systemDrive)\boot\bcd",
                             "/set `{bootmgr`} device locate"
                         )
-                        Run-Executable -Executable "BCDEDIT.EXE" -Arguments (
+                        Run-Executable -Executable $BcdEdit -Arguments (
                             "/store $($systemDrive)\boot\bcd",
                             "/set `{default`} device locate"
                         )
-                        Run-Executable -Executable "BCDEDIT.EXE" -Arguments (
+                        Run-Executable -Executable $BcdEdit -Arguments (
                             "/store $($systemDrive)\boot\bcd",
                             "/set `{default`} osdevice locate"
                         )
@@ -2188,14 +2202,14 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                         if (Test-Path $bcdStore)
                         {
                             Write-LogMessage "Turning kernel debugging on in the $($VHDFormat) for $($bcdStore)..." -logType Verbose
-                            Run-Executable -Executable "BCDEDIT.EXE" -Arguments (
+                            Run-Executable -Executable $BcdEdit -Arguments (
                                 "/store $($bcdStore)",
                                 "/set `{default`} debug on"
                                 )
 
                             $bcdEditArguments = @("/store $($bcdStore)") + $bcdEditArgs
 
-                            Run-Executable -Executable "BCDEDIT.EXE" -Arguments $bcdEditArguments
+                            Run-Executable -Executable $BcdEdit -Arguments $bcdEditArguments
                         }
                     }
                 }
