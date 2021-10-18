@@ -3,13 +3,13 @@ Convert-WindowsImage
 {
     <#
     .NOTES
-        Version:        21H2-20211016
+        Version:        21H2-20211018
 
         License:        GPLv3 or any later
+                        MIT for all microsoft commits
         
         Convert-WindowsImage - Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
     
-        Copyright (c) Microsoft Corporation.  All rights reserved.
         Copyright (c) 2019 x0nn
 
         This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,28 @@ Convert-WindowsImage
 
         You should have received a copy of the GNU General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+        MIT License
+
+        Copyright (c) Microsoft Corporation.  All rights reserved.
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
 
     .SYNOPSIS
         Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
@@ -2060,10 +2082,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 Copy-Item -Recurse -Path (Join-Path $MergeFolderPath "*") -Destination $windowsDrive -Force #added to handle merge folders
             }
 
-            $openWim = New-Object -TypeName "WIM2VHD.WimFile" -ArgumentList $SourcePath
-
-            if (($openWim.Images[$WindowsImage.ImageIndex].ImageArchitecture -ne "ARM") -and  # No virtualization platform for ARM images, ARM64 is supported now
-                ( $BcdInVhd -ne "NativeBoot" ))                       # User asked for a non-bootable image
+            if ( $BcdInVhd -ne "NativeBoot" )
             {
                 if (Test-Path "$($systemDrive)\boot\bcd")
                 {
@@ -2354,13 +2373,6 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
         }
         finally
         {
-            # If we still have a WIM image open, close it.
-            if ($openWim -ne $null)
-            {
-                Write-LogMessage "Closing Windows image..." -logType Verbose
-                $openWim.Close()
-            }
-
             # If we still have a registry hive mounted, dismount it.
             if ($mountedHive -ne $null)
             {
