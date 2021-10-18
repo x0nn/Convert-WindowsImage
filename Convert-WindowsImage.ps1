@@ -104,7 +104,7 @@ Convert-WindowsImage
         The complete path to an unattend.xml file that can be injected into the VHD(X).
 
     .PARAMETER Edition
-        The name or image index of the image to apply from the WIM. Use the DISM-Powershell Module to get the names or use -Edition "LIST" as parameter.
+        The name or image index of the image to apply from the ESD/WIM. If omitted and more than one image is available, all images are listed.
 
     .PARAMETER Passthru
         Specifies that the full path to the VHD(X) that is created should be
@@ -1797,53 +1797,57 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             # QUERY WIM INFORMATION AND EXTRACT THE INDEX OF TARGETED IMAGE
             ####################################################################################################
 
-            Write-LogMessage "Looking for the requested Windows image in the WIM file" -logType Verbose
-            $WindowsImages = Get-WindowsImage -ImagePath $SourcePath
-
-            if (-not $WindowsImages -or ($WindowsImages -is [System.Array]))
+            Write-LogMessage "Looking for the requested Windows image in the WIM/ESD file" -logType Verbose
+            
+            try
             {
-                #
-                # WIM may have multiple images.  Filter on Edition (can be index or name) and try to find a unique image
-                #
-                $EditionIndex = 0;
-                if ([Int32]::TryParse($Edition, [ref]$EditionIndex))
-                {
-                    $WindowsImage = Get-WindowsImage -ImagePath $SourcePath -Index $EditionIndex
-                }
-                else
-                {
-                    $WindowsImage = Get-WindowsImage -ImagePath $SourcePath | Where-Object {$_.ImageName -ilike "*$($Edition)"}
-                }
-
-                if (-not $WindowsImage)
-                {
-                    Write-LogMessage "The selected Edtion was not found on the WIM file. The following images are available:" -logType Warning
-
-                    $WindowsImages | ForEach-Object {Write-LogMessage "$($_.ImageName) (Index: $($_.ImageIndex))" -logType Warning}
-
-                    throw "Requested windows Image was not found on the WIM file!"
-                }
-                if ($WindowsImage -is [System.Array])
-                {
-                    Write-LogMessage "WIM file has the following $($WindowsImage.Count) images that match filter *$($Edition)" 
-                    Get-WindowsImage -ImagePath $SourcePath
-
-                    Write-LogMessage "You must specify an Edition or SKU index, since the WIM has more than one image." -logType Error
-                    throw "There are more than one images that match ImageName filter *$($Edition)"
-                }
+                [Microsoft.Dism.Commands.BasicImageInfoObject[]]$WindowsImages = Get-WindowsImage -ImagePath $SourcePath
             }
-
-            $ImageIndex = $WindowsImage[0].ImageIndex
-
-            if ($null -eq $ImageIndex)
+            catch
             {
-                Write-LogMessage "The specified edition does not appear to exist in the specified WIM." -logType Error
-                Write-LogMessage "Valid edition names are: " -logType Error
-                Write-LogMessage $WindowsImage -logType Error
+                Write-LogMessage "'$SourcePath' does not seem a valid WindowsImage" -logType Error
                 throw
             }
 
-            Write-LogMessage "Image $($WindowsImage[0].ImageIndex) selected ($($WindowsImage[0].ImageName))..." -logType Verbose
+            if ($WindowsImages.Count -gt 1)
+            {
+                $EditionIndex = 0;
+
+                if ([Int32]::TryParse($Edition, [ref]$EditionIndex) -and $WindowsImages.Count -ge $EditionIndex)
+                {
+                    $EditionIndex --
+                    $WindowsImage = $WindowsImages[$EditionIndex]
+                }
+                else
+                {
+                    [Microsoft.Dism.Commands.BasicImageInfoObject[]]$filteredImages = $WindowsImages | Where-Object {$_.ImageName -ilike "*$($Edition)*"}
+
+                    if ($null -ne $filteredImages)
+                    {
+                        if ($filteredImages.Count -gt 1)
+                        {
+                            List-WindowsImages $filteredImages
+                            throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list."
+                        }
+                        else
+                        {
+                            $WindowsImage = $filteredImages[0]
+                        }
+                    }
+                    else
+                    {
+                        List-WindowsImages $WindowsImages
+                        throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list."
+                    }
+                }
+            }
+            else
+            {
+                $WindowsImage = $WindowsImages[0]
+            }
+            
+
+            Write-LogMessage "Image $($WindowsImage.ImageIndex) selected ($($WindowsImage.ImageName))..." -logType Verbose
 
             if ($hyperVEnabled)
             {
@@ -2430,6 +2434,18 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
     #endregion Code
 
 }
+
+function List-WindowsImages
+{
+	[cmdletBinding()]
+	param (
+        [Parameter(Position=0,Mandatory=$True, ValueFromPipeline)][Microsoft.Dism.Commands.BasicImageInfoObject[]]$windowsImages
+        )
+        Write-LogMessage "The following images are in the image:" -logType Warning
+        $windowsImages | ForEach-Object {Write-LogMessage "Name: ""$($_.ImageName)"" (Index: $($_.ImageIndex))" -logType Warning}
+
+}
+
 
 function Write-LogMessage
 {
