@@ -3,13 +3,13 @@ Convert-WindowsImage
 {
     <#
     .NOTES
-        Version:        21H2-20211016
+        Version:        21H2-20211018
 
         License:        GPLv3 or any later
+                        MIT for all microsoft commits
         
         Convert-WindowsImage - Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
     
-        Copyright (c) Microsoft Corporation.  All rights reserved.
         Copyright (c) 2019 x0nn
 
         This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,28 @@ Convert-WindowsImage
 
         You should have received a copy of the GNU General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+        MIT License
+
+        Copyright (c) Microsoft Corporation.  All rights reserved.
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
 
     .SYNOPSIS
         Creates a bootable VHD(X) based on Windows 7,8, 10, 11 or Windows Server 2012, 2012R2, 2016, 2019, 2022 installation media.
@@ -82,7 +104,7 @@ Convert-WindowsImage
         The complete path to an unattend.xml file that can be injected into the VHD(X).
 
     .PARAMETER Edition
-        The name or image index of the image to apply from the WIM. Use the DISM-Powershell Module to get the names or use -Edition "LIST" as parameter.
+        The name or image index of the image to apply from the ESD/WIM. If omitted and more than one image is available, all images are listed.
 
     .PARAMETER Passthru
         Specifies that the full path to the VHD(X) that is created should be
@@ -1775,53 +1797,57 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             # QUERY WIM INFORMATION AND EXTRACT THE INDEX OF TARGETED IMAGE
             ####################################################################################################
 
-            Write-LogMessage "Looking for the requested Windows image in the WIM file" -logType Verbose
-            $WindowsImages = Get-WindowsImage -ImagePath $SourcePath
-
-            if (-not $WindowsImages -or ($WindowsImages -is [System.Array]))
+            Write-LogMessage "Looking for the requested Windows image in the WIM/ESD file" -logType Verbose
+            
+            try
             {
-                #
-                # WIM may have multiple images.  Filter on Edition (can be index or name) and try to find a unique image
-                #
-                $EditionIndex = 0;
-                if ([Int32]::TryParse($Edition, [ref]$EditionIndex))
-                {
-                    $WindowsImage = Get-WindowsImage -ImagePath $SourcePath -Index $EditionIndex
-                }
-                else
-                {
-                    $WindowsImage = Get-WindowsImage -ImagePath $SourcePath | Where-Object {$_.ImageName -ilike "*$($Edition)"}
-                }
-
-                if (-not $WindowsImage)
-                {
-                    Write-LogMessage "The selected Edtion was not found on the WIM file. The following images are available:" -logType Warning
-
-                    $WindowsImages | ForEach-Object {Write-LogMessage "$($_.ImageName) (Index: $($_.ImageIndex))" -logType Warning}
-
-                    throw "Requested windows Image was not found on the WIM file!"
-                }
-                if ($WindowsImage -is [System.Array])
-                {
-                    Write-LogMessage "WIM file has the following $($WindowsImage.Count) images that match filter *$($Edition)" 
-                    Get-WindowsImage -ImagePath $SourcePath
-
-                    Write-LogMessage "You must specify an Edition or SKU index, since the WIM has more than one image." -logType Error
-                    throw "There are more than one images that match ImageName filter *$($Edition)"
-                }
+                [Microsoft.Dism.Commands.BasicImageInfoObject[]]$WindowsImages = Get-WindowsImage -ImagePath $SourcePath
             }
-
-            $ImageIndex = $WindowsImage[0].ImageIndex
-
-            if ($null -eq $ImageIndex)
+            catch
             {
-                Write-LogMessage "The specified edition does not appear to exist in the specified WIM." -logType Error
-                Write-LogMessage "Valid edition names are: " -logType Error
-                Write-LogMessage $WindowsImage -logType Error
+                Write-LogMessage "'$SourcePath' does not seem a valid WindowsImage" -logType Error
                 throw
             }
 
-            Write-LogMessage "Image $($WindowsImage[0].ImageIndex) selected ($($WindowsImage[0].ImageName))..." -logType Verbose
+            if ($WindowsImages.Count -gt 1)
+            {
+                $EditionIndex = 0;
+
+                if ([Int32]::TryParse($Edition, [ref]$EditionIndex) -and $WindowsImages.Count -ge $EditionIndex)
+                {
+                    $EditionIndex --
+                    $WindowsImage = $WindowsImages[$EditionIndex]
+                }
+                else
+                {
+                    [Microsoft.Dism.Commands.BasicImageInfoObject[]]$filteredImages = $WindowsImages | Where-Object {$_.ImageName -ilike "*$($Edition)*"}
+
+                    if ($null -ne $filteredImages)
+                    {
+                        if ($filteredImages.Count -gt 1)
+                        {
+                            List-WindowsImages $filteredImages
+                            throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list."
+                        }
+                        else
+                        {
+                            $WindowsImage = $filteredImages[0]
+                        }
+                    }
+                    else
+                    {
+                        List-WindowsImages $WindowsImages
+                        throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list."
+                    }
+                }
+            }
+            else
+            {
+                $WindowsImage = $WindowsImages[0]
+            }
+            
+
+            Write-LogMessage "Image $($WindowsImage.ImageIndex) selected ($($WindowsImage.ImageName))..." -logType Verbose
 
             if ($hyperVEnabled)
             {
@@ -2060,10 +2086,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 Copy-Item -Recurse -Path (Join-Path $MergeFolderPath "*") -Destination $windowsDrive -Force #added to handle merge folders
             }
 
-            $openWim = New-Object -TypeName "WIM2VHD.WimFile" -ArgumentList $SourcePath
-
-            if (($openWim.Images[$WindowsImage.ImageIndex].ImageArchitecture -ne "ARM") -and  # No virtualization platform for ARM images, ARM64 is supported now
-                ( $BcdInVhd -ne "NativeBoot" ))                       # User asked for a non-bootable image
+            if ( $BcdInVhd -ne "NativeBoot" )
             {
                 if (Test-Path "$($systemDrive)\boot\bcd")
                 {
@@ -2354,13 +2377,6 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
         }
         finally
         {
-            # If we still have a WIM image open, close it.
-            if ($openWim -ne $null)
-            {
-                Write-LogMessage "Closing Windows image..." -logType Verbose
-                $openWim.Close()
-            }
-
             # If we still have a registry hive mounted, dismount it.
             if ($mountedHive -ne $null)
             {
@@ -2418,6 +2434,18 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
     #endregion Code
 
 }
+
+function List-WindowsImages
+{
+	[cmdletBinding()]
+	param (
+        [Parameter(Position=0,Mandatory=$True, ValueFromPipeline)][Microsoft.Dism.Commands.BasicImageInfoObject[]]$windowsImages
+        )
+        Write-LogMessage "The following images are in the image:" -logType Warning
+        $windowsImages | ForEach-Object {Write-LogMessage "Name: ""$($_.ImageName)"" (Index: $($_.ImageIndex))" -logType Warning}
+
+}
+
 
 function Write-LogMessage
 {
