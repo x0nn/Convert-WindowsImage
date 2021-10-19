@@ -2039,7 +2039,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             Write-LogMessage "Applying image to $VHDFormat. This could take a while..." -logType Verbose
             if ((Get-Command Expand-WindowsImage -ErrorAction SilentlyContinue) -and ((-not $ApplyEA) -and ([string]::IsNullOrEmpty($DismPath))))
             {
-                Expand-WindowsImage -ApplyPath $windowsDrive -ImagePath $SourcePath -Index $ImageIndex -LogPath "$($logFolder)\DismLogs.log" | Out-Null
+                Expand-WindowsImage -ApplyPath $windowsDrive -ImagePath $SourcePath -Index $WindowsImage.ImageIndex -LogPath "$($logFolder)\DismLogs.log" | Out-Null
             }
             else
             {
@@ -2058,7 +2058,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     $applyImage = $applyImage + " /EA"
                 }
 
-                $dismArgs = @("$applyImage /ImageFile:`"$SourcePath`" /Index:$ImageIndex /ApplyDir:$windowsDrive /LogPath:`"$($logFolder)\DismLogs.log`"")
+                $dismArgs = @("$applyImage /ImageFile:`"$SourcePath`" /Index:$($WindowsImage.ImageIndex) /ApplyDir:$windowsDrive /LogPath:`"$($logFolder)\DismLogs.log`"")
                 Write-LogMessage "Applying image: $dismPath $dismArgs" -logType Verbose
                 $process  = Start-Process -Passthru -Wait -NoNewWindow -FilePath $dismPath `
                             -ArgumentList $dismArgs `
