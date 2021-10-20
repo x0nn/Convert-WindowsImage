@@ -3,7 +3,7 @@ Convert-WindowsImage
 {
     <#
     .NOTES
-        Version:        21H2-20211018
+        Version:        21H2-20211020
 
         License:        GPLv3 or any later
                         MIT for all microsoft commits
@@ -1719,6 +1719,27 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 {
                     throw "There is a mismatch between the VHDPath file extension ($($extension.ToUpper())), and the VHDFormat (.$($VHDFormat)).  Please ensure that these match and try again."
                 }
+
+                if (Test-Path $VHDPath) 
+                {
+                    $VHDPathInUse = (Join-Path $WorkingDirectory $VHDPath)
+                    Write-LogMessage "A file ""$VHDPathInUse"" already exists and will be overwritten." -logType Warning
+                
+                    if (Get-Disk | Where-Object {$_.Location -eq $VHDPathInUse})
+                    {
+                        try
+                        {
+                            Write-LogMessage "Trying to dismount ""$VHDPathInUse""." -logType Warning
+                            Dismount-DiskImage -ImagePath $VHDPathInUse
+                        }
+                        catch
+                        {
+                            Write-LogMessage "The file ""$VHDPathInUse"" is already mounted and cannot be dismounted. Dismount manually and try again." -logType Error
+                            throw
+                        }
+                    
+                    }
+                }
             }
 
             # Create a temporary name for the VHD(x).  We'll name it properly at the end of the script.
@@ -1759,7 +1780,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 $isoPath = (Resolve-Path $SourcePath).Path
 
                 Write-LogMessage "Opening ISO $(Split-Path $isoPath -Leaf)..." -logType Verbose
-                Mount-DiskImage -ImagePath $isoPath -StorageType ISO
+                Mount-DiskImage -ImagePath $isoPath -StorageType ISO | Out-Null
                 Get-PSDrive -PSProvider FileSystem | Out-Null #Bugfix to refresh the Drive-List
                 # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
                 $openIso     = Get-DiskImage -ImagePath $isoPath
@@ -1797,7 +1818,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             # QUERY WIM INFORMATION AND EXTRACT THE INDEX OF TARGETED IMAGE
             ####################################################################################################
 
-            Write-LogMessage "Looking for the requested Windows image in the WIM/ESD file" -logType Verbose
+            Write-LogMessage "Looking for the requested Windows image in the WIM/ESD file..." -logType Verbose
             
             try
             {
@@ -1809,14 +1830,18 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                 throw
             }
 
-            if ($WindowsImages.Count -gt 1)
-            {
                 $EditionIndex = 0;
 
                 if ([Int32]::TryParse($Edition, [ref]$EditionIndex) -and $WindowsImages.Count -ge $EditionIndex)
                 {
                     $EditionIndex --
                     $WindowsImage = $WindowsImages[$EditionIndex]
+                }
+                elseif ([String]::IsNullOrWhiteSpace($Edition) -and $WindowsImages.Count -eq 1)
+                {
+                    $WindowsImage = $WindowsImages[0]
+                    Write-LogMessage "No Edition was chosen, but selected the only WindowsImage (Edition) available in the file..." -logType Warning
+                    List-WindowsImages $WindowsImage
                 }
                 else
                 {
@@ -1827,7 +1852,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                         if ($filteredImages.Count -gt 1)
                         {
                             List-WindowsImages $filteredImages
-                            throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list."
+                            throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list above."
                         }
                         else
                         {
@@ -1837,17 +1862,11 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     else
                     {
                         List-WindowsImages $WindowsImages
-                        throw "There is more than one WindowsImage (Edition) available. Choose with -Edition using Name oder Index from the list."
+                        throw "The filter did not find any WindowsImages (Edition). Choose with -Edition using Name or Index from the list above."
                     }
-                }
-            }
-            else
-            {
-                $WindowsImage = $WindowsImages[0]
-            }
-            
+                }            
 
-            Write-LogMessage "Image $($WindowsImage.ImageIndex) selected ($($WindowsImage.ImageName))..." -logType Verbose
+            Write-LogMessage "Image $($WindowsImage.ImageIndex) selected ""$($WindowsImage.ImageName)""" -logType Verbose
 
             if ($hyperVEnabled)
             {
@@ -2039,7 +2058,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             Write-LogMessage "Applying image to $VHDFormat. This could take a while..." -logType Verbose
             if ((Get-Command Expand-WindowsImage -ErrorAction SilentlyContinue) -and ((-not $ApplyEA) -and ([string]::IsNullOrEmpty($DismPath))))
             {
-                Expand-WindowsImage -ApplyPath $windowsDrive -ImagePath $SourcePath -Index $ImageIndex -LogPath "$($logFolder)\DismLogs.log" | Out-Null
+                Expand-WindowsImage -ApplyPath $windowsDrive -ImagePath $SourcePath -Index $WindowsImage.ImageIndex -LogPath "$($logFolder)\DismLogs.log" | Out-Null
             }
             else
             {
@@ -2058,7 +2077,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
                     $applyImage = $applyImage + " /EA"
                 }
 
-                $dismArgs = @("$applyImage /ImageFile:`"$SourcePath`" /Index:$ImageIndex /ApplyDir:$windowsDrive /LogPath:`"$($logFolder)\DismLogs.log`"")
+                $dismArgs = @("$applyImage /ImageFile:`"$SourcePath`" /Index:$($WindowsImage.ImageIndex) /ApplyDir:$windowsDrive /LogPath:`"$($logFolder)\DismLogs.log`"")
                 Write-LogMessage "Applying image: $dismPath $dismArgs" -logType Verbose
                 $process  = Start-Process -Passthru -Wait -NoNewWindow -FilePath $dismPath `
                             -ArgumentList $dismArgs `
@@ -2404,7 +2423,7 @@ You can use the fields below to configure the VHD or VHDX that you want to creat
             if ($openIso -ne $null)
             {
                 Write-LogMessage "Closing ISO..." -logType Verbose
-                Dismount-DiskImage $ISOPath
+                Dismount-DiskImage $ISOPath | Out-Null
             }
 
             if (-not $CacheSource)
